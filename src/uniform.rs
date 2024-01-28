@@ -1,7 +1,11 @@
+extern crate nalgebra_glm as glm;
+
 #[derive(Clone)]
 pub enum UniformValue {
     Float(f64),
-    Int(i64)
+    Int(i64),
+    Mat4(glm::TMat4<f32>),
+    Array_F(Vec<f32>),
 }
 
 #[derive(Clone)]
