@@ -77,8 +77,7 @@ impl Shader {
         };
 
         if(location == -1) {
-            //println!("Uniform {} not found in shader", key.clone());
-            //panic!("Uniform {} not found in shader", key.clone());
+            println!("Uniform {} not found in shader", key.clone());
         } else {
             match self.uniform_manager.get_value(&key) {
                 UniformValue::Float(value) => unsafe {
@@ -92,6 +91,9 @@ impl Shader {
                 },
                 UniformValue::Array_F(value) => unsafe {
                     gl::Uniform1fv(location, value.len() as GLsizei, value.as_ptr());
+                },
+                UniformValue::Vec2(value) => unsafe {
+                    gl::Uniform2f(location, value.x, value.y);
                 }
             }
         }

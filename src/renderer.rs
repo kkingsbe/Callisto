@@ -8,7 +8,8 @@ use crate::simulation::Simulation;
 
 pub struct Renderer {
     pub program: ShaderProgram,
-    pub simulation: Simulation
+    pub simulation: Simulation,
+    mouse_position: glm::Vec2
 }
 
 impl Renderer {
@@ -21,14 +22,19 @@ impl Renderer {
 
         unsafe {
             let mut fragment_shader = Shader::new("visualize".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
+            fragment_shader.add_uniform("u_mouse_position".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
             fragment_shader.add_uniform("u_resolution".to_string(), UniformValue::Float(800.0));
             fragment_shader.add_uniform("u_time".to_string(), UniformValue::Float(0.0));
             fragment_shader.add_uniform("u_tracer_data".to_string(), UniformValue::Array_F(vec!(0.0, 0.0).repeat(simulation.particles.len())));
 
             let program = ShaderProgram::new(vec!(fragment_shader))?;
 
-            Ok(Self { program, simulation })
+            Ok(Self { program, simulation, mouse_position: glm::vec2(0.0, 0.0) })
         }
+    }
+
+    pub fn set_mouse_position(&mut self, x: f32, y: f32) {
+        self.mouse_position = glm::vec2(x, y);
     }
 
     pub fn draw(&mut self) {
@@ -37,6 +43,7 @@ impl Renderer {
         let program_id = self.program.id;
         let shader = self.program.get_shader("visualize".to_string()).unwrap();
 
+        shader.update_uniform_value("u_mouse_position".to_string(), UniformValue::Vec2(self.mouse_position));
         shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.simulation.t));
         shader.update_uniform_value("u_resolution".to_string(), UniformValue::Float(800.0));
         shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(self.simulation.pack()));

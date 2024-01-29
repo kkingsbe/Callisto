@@ -6,6 +6,7 @@ pub enum UniformValue {
     Int(i64),
     Mat4(glm::TMat4<f32>),
     Array_F(Vec<f32>),
+    Vec2(glm::Vec2),
 }
 
 #[derive(Clone)]

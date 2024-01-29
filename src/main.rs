@@ -40,6 +40,9 @@ fn main() {
                     gl_context.resize(physical_size)
                 },
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                WindowEvent::CursorMoved { position, .. } => {
+                    renderer.set_mouse_position(position.x as f32, position.y as f32);
+                },
                 _ => (),
             },
             Event::RedrawRequested(_) => {

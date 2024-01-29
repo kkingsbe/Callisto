@@ -6,10 +6,14 @@
 
 #define BRIGHTNESS 0.4
 #define SPREAD 6.0
+#define CROSSHAIR_LINE_WIDTH 0.001
+#define CROSSHAIR_SIZE 0.02
+#define CROSSHAIR_GAP_SIZE 0.005
 
 //uniform float u_resolution;
 uniform float u_time;
 uniform float u_tracer_data[NUM_TRACERS * TRACER_SIZE];
+uniform vec2 u_mouse_position;
 
 vec3 lightblue(float value) {
     return mix(vec3(0.0, 0.222, 0.731), vec3(0.212, 0.625, 0.684), value);
@@ -24,10 +28,26 @@ vec3 purplered(float value) {
     return mix(vec3(0.925, 0.4314, 0.678), vec3(0.204, 0.58, 0.9), value);
 }
 
+vec3 draw_crosshair(vec2 st, vec2 mouse_coords) {
+    if(abs(st.x - mouse_coords.x) < CROSSHAIR_GAP_SIZE && abs(st.y - mouse_coords.y) < CROSSHAIR_GAP_SIZE) {
+        return vec3(0.0);
+    }
+    if(st.x >= mouse_coords.x - CROSSHAIR_LINE_WIDTH && st.x <= mouse_coords.x + CROSSHAIR_LINE_WIDTH && abs(st.y - mouse_coords.y) <= CROSSHAIR_SIZE) {
+        return vec3(1.0, 1.0, 1.0);
+    }
+    if(st.y >= mouse_coords.y - CROSSHAIR_LINE_WIDTH && st.y <= mouse_coords.y + CROSSHAIR_LINE_WIDTH && abs(st.x - mouse_coords.x) <= CROSSHAIR_SIZE) {
+        return vec3(1.0, 1.0, 1.0);
+    }
+    return vec3(0.0);
+}
+
 void main() {
     float spread = SPREAD / 1000.0;
     float cell_size = 1.0 / SIM_RESOLUTION;
     vec2 st = gl_FragCoord.xy / RESOLUTION;
+    vec2 mouse_coords = u_mouse_position / RESOLUTION;
+    mouse_coords.y = 1.0 - mouse_coords.y;
+
     float density = 0.0;
     vec3 color = vec3(0.0);
 
@@ -63,6 +83,11 @@ void main() {
     //color = lightblue(density);
     //color = purplered(density);
     color = lightblue(density);
+
+    vec3 crosshair = draw_crosshair(st, mouse_coords);
+    if(crosshair != vec3(0.0)) {
+        color = crosshair;
+    }
 
     gl_FragColor = vec4(color, 1.0);
 }
