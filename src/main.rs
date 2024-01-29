@@ -3,6 +3,7 @@ mod shaderprogram;
 mod renderer;
 mod uniform;
 mod particle;
+mod simulation;
 
 use glutin::{Api, ContextBuilder, GlRequest};
 use glutin::event::{Event, WindowEvent};

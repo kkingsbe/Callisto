@@ -31,20 +31,21 @@ impl Particle {
         self.position = new_pos;
         self.velocity = new_vel;
         self.acceleration = self.new_acceleration;
+        self.new_acceleration = glm::vec2(0.0, 0.0);
 
-        if(self.position.x > 1.0) {
+        if self.position.x > 1.0 {
             self.position.x = 0.0;
         }
 
-        if(self.position.x < 0.0) {
+        if self.position.x < 0.0 {
             self.position.x = 1.0;
         }
 
-        if(self.position.y > 1.0) {
+        if self.position.y > 1.0 {
             self.position.y = 0.0;
         }
 
-        if(self.position.y < 0.0) {
+        if self.position.y < 0.0 {
             self.position.y = 1.0;
         }
     }

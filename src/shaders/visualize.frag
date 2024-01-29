@@ -2,14 +2,15 @@
 #define NUM_TRACERS 100
 #define TRACER_SIZE 2 //Number of floats per tracer
 #define SIM_RESOLUTION 1000.0 //Grid size
+#define RESOLUTION 800.0 //Canvas size
 
-uniform float u_resolution;
+//uniform float u_resolution;
 uniform float u_time;
 uniform float u_tracer_data[NUM_TRACERS * TRACER_SIZE];
 
 void main() {
     float cell_size = 1.0 / SIM_RESOLUTION;
-    vec2 st = gl_FragCoord.xy / u_resolution;
+    vec2 st = gl_FragCoord.xy / RESOLUTION;
     float density = 0.0;
     vec3 color = vec3(0.0);
 

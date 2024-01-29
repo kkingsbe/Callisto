@@ -6,104 +6,42 @@ use crate::shader::{Shader, ShaderError};
 use crate::shaderprogram::ShaderProgram;
 use crate::uniform::UniformValue;
 extern crate nalgebra_glm as glm;
-use crate::particle::Particle;
-
-const num_particles: usize = 100;
+use crate::simulation::Simulation;
 
 pub struct Renderer {
-    pub t: f64,
-    t_start: f64,
-    rng: rand::rngs::ThreadRng,
     pub program: ShaderProgram,
-    particles: Vec<Particle>
+    pub simulation: Simulation
 }
 
 impl Renderer {
     pub fn new() -> Result<Self, ShaderError> {
-        let t_start = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as f64) / 1000.0;
         let FRAGMENT_SHADER_SOURCE = include_str!("shaders/visualize.frag");
-        //let VERTEX_SHADER_SOURCE = include_str!("shaders/test3d.vert");
 
         println!("{}", FRAGMENT_SHADER_SOURCE);
 
-        let mut rng = rand::thread_rng();
-        let mut initial_state = Vec::new(); //vec!(Particle::new(rand::thread_rng(), glm::vec2(0.5, 0.5), glm::vec2(0.0, 0.0))).repeat(100);
-        for i in 0..num_particles {
-            initial_state.push(Particle::new(
-                glm::vec2(
-                    rng.gen_range(0.1..0.9),
-                    rng.gen_range(0.1..0.9)
-                ),
-                glm::vec2(
-                    rng.gen_range(-0.2..0.2),
-                    rng.gen_range(-0.2..0.2)
-                )
-            ));
-        }
-
-        println!("{:#?}", initial_state);
+        let simulation = Simulation::new(0.01 / 1000.0, 0.2, 0.5, 100);
 
         unsafe {
             let mut fragment_shader = Shader::new("visualize".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
             fragment_shader.add_uniform("u_resolution".to_string(), UniformValue::Float(800.0));
             fragment_shader.add_uniform("u_time".to_string(), UniformValue::Float(0.0));
-            fragment_shader.add_uniform("u_tracer_data".to_string(), UniformValue::Array_F(vec!(0.0, 0.0).repeat(num_particles)));
+            fragment_shader.add_uniform("u_tracer_data".to_string(), UniformValue::Array_F(vec!(0.0, 0.0).repeat(simulation.particles.len())));
 
             let program = ShaderProgram::new(vec!(fragment_shader))?;
 
 
-            Ok(Self { program, t_start, t: 0.0, rng, particles: initial_state })
+            Ok(Self { program, simulation })
         }
-    }
-
-    fn update_time(&mut self) {
-        self.t = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as f64 / 1000.0) - self.t_start;
     }
 
     pub fn draw(&mut self) {
-        self.update_time();
-
-        for i in 0..self.particles.len() {
-            self.particles[i].new_acceleration = glm::vec2(0.0, 0.0);
-
-            for j in 0..self.particles.len() {
-                if i != j {
-                    let distance = self.particles[j].position - self.particles[i].position;
-
-                    // Avoid division by zero by adding a small epsilon
-                    let epsilon = 0.0001;
-                    let mut a_x = 0.1 / (distance.x.powi(2) + epsilon);
-                    let mut a_y = 0.1 / (distance.y.powi(2) + epsilon);
-
-                    if distance.x < 0.0 {
-                        a_x *= -1.0;
-                    }
-
-                    if distance.y < 0.0 {
-                        a_y *= -1.0;
-                    }
-
-                    // Update acceleration
-                    self.particles[i].new_acceleration.x += a_x;
-                    self.particles[i].new_acceleration.y += a_y;
-                }
-            }
-        }
-
-        for particle in &mut self.particles {
-            particle.update(0.01 / 1000.0);
-        }
-
+        self.simulation.step();
         let program_id = self.program.id;
         let shader = self.program.get_shader("visualize".to_string()).unwrap();
 
-        shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.t));
+        shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.simulation.t));
         shader.update_uniform_value("u_resolution".to_string(), UniformValue::Float(800.0));
-        shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(
-            self.particles.iter()
-                .flat_map(|p| p.to_flat().into_iter())
-                .collect()
-        ));
+        shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(self.simulation.pack()));
         shader.apply_uniforms(program_id);
 
         let vertex_data: [f32; 20] = [
