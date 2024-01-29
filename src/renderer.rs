@@ -72,8 +72,16 @@ impl Renderer {
 
                     // Avoid division by zero by adding a small epsilon
                     let epsilon = 0.0001;
-                    let a_x = 0.1 / (distance.x.powi(2) + epsilon);
-                    let a_y = 0.1 / (distance.y.powi(2) + epsilon);
+                    let mut a_x = 0.1 / (distance.x.powi(2) + epsilon);
+                    let mut a_y = 0.1 / (distance.y.powi(2) + epsilon);
+
+                    if distance.x < 0.0 {
+                        a_x *= -1.0;
+                    }
+
+                    if distance.y < 0.0 {
+                        a_y *= -1.0;
+                    }
 
                     // Update acceleration
                     self.particles[i].new_acceleration.x += a_x;
