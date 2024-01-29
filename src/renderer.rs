@@ -1,7 +1,5 @@
 use std::ptr;
-use std::time::SystemTime;
 use gl::types::GLuint;
-use rand::Rng;
 use crate::shader::{Shader, ShaderError};
 use crate::shaderprogram::ShaderProgram;
 use crate::uniform::UniformValue;
@@ -19,7 +17,7 @@ impl Renderer {
 
         println!("{}", FRAGMENT_SHADER_SOURCE);
 
-        let simulation = Simulation::new(0.0001 / 1000.0, 0.5, 0.01, 400);
+        let simulation = Simulation::new(0.001 / 1000.0, 0.1, 0.002, 0.0, 400, 1);
 
         unsafe {
             let mut fragment_shader = Shader::new("visualize".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
@@ -29,13 +27,13 @@ impl Renderer {
 
             let program = ShaderProgram::new(vec!(fragment_shader))?;
 
-
             Ok(Self { program, simulation })
         }
     }
 
     pub fn draw(&mut self) {
         self.simulation.step();
+
         let program_id = self.program.id;
         let shader = self.program.get_shader("visualize".to_string()).unwrap();
 

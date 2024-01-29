@@ -6,18 +6,20 @@ use rand::Rng;
 #[derive(Clone, Debug)]
 pub struct Particle {
     pub position: glm::Vec2,
-    velocity: glm::Vec2,
+    pub velocity: glm::Vec2,
     acceleration: glm::Vec2,
-    pub new_acceleration: glm::Vec2
+    pub new_acceleration: glm::Vec2,
+    domain_wrap: bool
 }
 
 impl Particle {
-    pub fn new(position: glm::Vec2, velocity: glm::Vec2) -> Self {
+    pub fn new(position: glm::Vec2, velocity: glm::Vec2, domain_wrap: bool) -> Self {
         Self {
             position,
             velocity,
             acceleration: glm::vec2(0.0, 0.0),
-            new_acceleration: glm::vec2(0.0, 0.0)
+            new_acceleration: glm::vec2(0.0, 0.0),
+            domain_wrap
         }
     }
 
@@ -33,20 +35,22 @@ impl Particle {
         self.acceleration = self.new_acceleration;
         self.new_acceleration = glm::vec2(0.0, 0.0);
 
-        if self.position.x > 1.0 {
-            self.position.x = 0.0;
-        }
+        if self.domain_wrap {
+            if self.position.x > 1.0 {
+                self.position.x = 0.0;
+            }
 
-        if self.position.x < 0.0 {
-            self.position.x = 1.0;
-        }
+            if self.position.x < 0.0 {
+                self.position.x = 1.0;
+            }
 
-        if self.position.y > 1.0 {
-            self.position.y = 0.0;
-        }
+            if self.position.y > 1.0 {
+                self.position.y = 0.0;
+            }
 
-        if self.position.y < 0.0 {
-            self.position.y = 1.0;
+            if self.position.y < 0.0 {
+                self.position.y = 1.0;
+            }
         }
     }
 }

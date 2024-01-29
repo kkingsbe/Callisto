@@ -9,6 +9,7 @@ use glutin::{Api, ContextBuilder, GlRequest};
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::window::WindowBuilder;
+
 use crate::renderer::Renderer;
 
 fn main() {
@@ -31,8 +32,6 @@ fn main() {
     let mut renderer = Renderer::new().expect("Cannot create renderer");
 
     event_loop.run(move |event, _, control_flow| {
-        //*control_flow = ControlFlow::Wait;
-
         match event {
             Event::LoopDestroyed => (),
             Event::WindowEvent { event, .. } => match event {

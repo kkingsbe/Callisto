@@ -58,6 +58,7 @@ impl Shader {
 
             error_log.set_len(error_log_size as usize);
             let log = String::from_utf8(error_log)?;
+            println!("Error: {}", log);
             Err(ShaderError::CompilationError(log))
         }
     }
