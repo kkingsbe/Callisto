@@ -1,8 +1,11 @@
 #define TWO_PI 6.28318530718
-#define NUM_TRACERS 100
+#define NUM_TRACERS 400
 #define TRACER_SIZE 2 //Number of floats per tracer
 #define SIM_RESOLUTION 1000.0 //Grid size
 #define RESOLUTION 800.0 //Canvas size
+
+#define BRIGHTNESS 0.2
+#define SPREAD 0.005
 
 //uniform float u_resolution;
 uniform float u_time;
@@ -37,12 +40,9 @@ void main() {
         //float spread = 0.05;
         //float brightness = 0.1;
 
-        float spread = 0.015; //0.1 will give a reasonably small spread
-        float brightness = 0.7;
-
-        float density_contrib = spread / (dist);
+        float density_contrib = SPREAD / (dist);
         if(density_contrib > 1.0) density_contrib = 1.0;
-        density += density_contrib * brightness;
+        density += density_contrib * BRIGHTNESS;
     }
 
     //Render the denisty as a heatmap

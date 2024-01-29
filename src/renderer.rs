@@ -19,7 +19,7 @@ impl Renderer {
 
         println!("{}", FRAGMENT_SHADER_SOURCE);
 
-        let simulation = Simulation::new(0.01 / 1000.0, 0.2, 0.5, 100);
+        let simulation = Simulation::new(0.0001 / 1000.0, 0.5, 0.01, 400);
 
         unsafe {
             let mut fragment_shader = Shader::new("visualize".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
