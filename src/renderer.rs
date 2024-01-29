@@ -35,6 +35,7 @@ impl Renderer {
 
     pub fn set_mouse_position(&mut self, x: f32, y: f32) {
         self.mouse_position = glm::vec2(x, y);
+        self.simulation.set_mouse_position(x, y);
     }
 
     pub fn draw(&mut self) {

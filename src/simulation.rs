@@ -8,7 +8,8 @@ extern crate nalgebra_glm as glm;
 pub enum FORCE_TYPE {
     ISL,
     LJ,
-    PROPORTIONAL
+    PROPORTIONAL,
+    MOUSE
 }
 
 const EPSILON: f32 = 0.000000001;
@@ -21,7 +22,8 @@ pub struct Simulation {
     pub attractive_force: f32,
     pub repulsive_force: f32,
     pub drag: f32,
-    pub microsteps: i32
+    pub microsteps: i32,
+    mouse_position: glm::Vec2
 }
 
 impl Default for Simulation {
@@ -31,7 +33,7 @@ impl Default for Simulation {
             0.001,
             0.000002,
             1.0,
-            1000.0,
+            10.0,
             400,
             1
         )
@@ -61,8 +63,13 @@ impl Simulation {
             attractive_force,
             repulsive_force,
             drag,
-            microsteps
+            microsteps,
+            mouse_position: glm::vec2(0.0, 0.0)
         }
+    }
+
+    pub fn set_mouse_position(&mut self, x: f32, y: f32) {
+        self.mouse_position = glm::vec2(x, y);
     }
 
     fn remap_trig(value: f32) -> f32 {
@@ -88,6 +95,28 @@ impl Simulation {
 
                 self.particles[i].new_acceleration.x -= vx_sign * self.drag * self.particles[i].velocity.x.powi(2);
                 self.particles[i].new_acceleration.y -= vy_sign * self.drag * self.particles[i].velocity.y.powi(2);
+                continue;
+            }
+
+            if force_type == FORCE_TYPE::MOUSE {
+                let distance = (self.mouse_position / 800.0) - self.particles[i].position;
+                let mut potential = glm::vec2(0.0, 0.0);
+                potential.x = -1.0 * self.lj_potential(distance.x);
+                potential.y = -1.0 * self.lj_potential(distance.y);
+
+                let mut a_x = force * potential.x;
+                let mut a_y = force * potential.y;
+
+                if distance.x < 0.0 {
+                    a_x *= -1.0;
+                }
+
+                if distance.y < 0.0 {
+                    a_y *= -1.0;
+                }
+
+                self.particles[i].new_acceleration.x += a_x;
+                self.particles[i].new_acceleration.y += a_y;
                 continue;
             }
 
@@ -150,6 +179,7 @@ impl Simulation {
         self.apply_force(self.attractive_force, FORCE_TYPE::ISL);
         self.apply_force(self.repulsive_force, FORCE_TYPE::LJ);
         self.apply_force(self.drag, FORCE_TYPE::PROPORTIONAL);
+        self.apply_force(0.001, FORCE_TYPE::MOUSE);
 
         for particle in &mut self.particles {
             particle.update(self.dt);
