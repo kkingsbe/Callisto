@@ -24,16 +24,30 @@ pub struct Simulation {
     pub microsteps: i32
 }
 
+impl Default for Simulation {
+    fn default() -> Self {
+        Self::new(
+            0.01 / 1000.0,
+            0.001,
+            0.000002,
+            1.0,
+            1000.0,
+            400,
+            1
+        )
+    }
+}
+
 impl Simulation {
-    pub fn new(dt: f32, attractive_force: f32, repulsive_force: f32, drag: f32, num_particles: i32, microsteps: i32) -> Self {
+    pub fn new(dt: f32, attractive_force: f32, repulsive_force: f32, drag: f32, max_spawn_velocity: f32, num_particles: i32, microsteps: i32) -> Self {
         let mut rng = rand::thread_rng();
         let mut initial_state = Vec::new();
         for _ in 0..num_particles {
             initial_state.push(Particle::new(
                 Simulation::rand_coord(rng.clone()),
                 glm::vec2(
-                    rng.gen_range(-0.9..0.9),
-                    rng.gen_range(-0.9..0.9)
+                    rng.gen_range(-max_spawn_velocity..max_spawn_velocity),
+                    rng.gen_range(-max_spawn_velocity..max_spawn_velocity)
                 ),
                 true
             ));
@@ -69,11 +83,11 @@ impl Simulation {
     pub fn apply_force(&mut self, force: f32, force_type: FORCE_TYPE) {
         for i in 0..self.particles.len() {
             if force_type == FORCE_TYPE::PROPORTIONAL {
-                let acc_x_sign = if self.particles[i].new_acceleration.x > 0.0 { 1.0 } else { -1.0 };
-                let acc_y_sign = if self.particles[i].new_acceleration.y > 0.0 { 1.0 } else { -1.0 };
+                let vx_sign = self.particles[i].velocity.x.signum();
+                let vy_sign = self.particles[i].velocity.y.signum();
 
-                self.particles[i].new_acceleration.x += acc_x_sign * self.drag * self.particles[i].velocity.x.exp2();
-                self.particles[i].new_acceleration.y += acc_y_sign * self.drag * self.particles[i].velocity.y.exp2();
+                self.particles[i].new_acceleration.x -= vx_sign * self.drag * self.particles[i].velocity.x.powi(2);
+                self.particles[i].new_acceleration.y -= vy_sign * self.drag * self.particles[i].velocity.y.powi(2);
                 continue;
             }
 
@@ -135,7 +149,7 @@ impl Simulation {
 
         self.apply_force(self.attractive_force, FORCE_TYPE::ISL);
         self.apply_force(self.repulsive_force, FORCE_TYPE::LJ);
-        //self.apply_force(self.drag, FORCE_TYPE::PROPORTIONAL);
+        self.apply_force(self.drag, FORCE_TYPE::PROPORTIONAL);
 
         for particle in &mut self.particles {
             particle.update(self.dt);
