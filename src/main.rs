@@ -7,6 +7,7 @@ mod simulation;
 
 use glutin::{Api, ContextBuilder, GlRequest};
 use glutin::event::{Event, WindowEvent};
+use glutin::event::WindowEvent::MouseInput;
 use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::window::WindowBuilder;
 
@@ -42,6 +43,24 @@ fn main() {
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                 WindowEvent::CursorMoved { position, .. } => {
                     renderer.set_mouse_position(position.x as f32, position.y as f32);
+                },
+                MouseInput { button, .. } => {
+                    match button {
+                        glutin::event::MouseButton::Left => {
+                            renderer.on_mouse_click();
+                        },
+                        _ => ()
+                    }
+                },
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if input.state == glutin::event::ElementState::Pressed {
+                        match input.virtual_keycode {
+                            Some(glutin::event::VirtualKeyCode::LControl) => {
+                                renderer.on_keypress(renderer::KEY::LCTRL)
+                            },
+                            _ => (),
+                        }
+                    }
                 },
                 _ => (),
             },

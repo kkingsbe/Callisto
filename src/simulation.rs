@@ -12,6 +12,12 @@ pub enum FORCE_TYPE {
     MOUSE
 }
 
+#[derive(PartialEq)]
+pub enum MOUSE_STATE {
+    ATTRACTIVE,
+    REPULSIVE
+}
+
 const EPSILON: f32 = 0.000000001;
 
 pub struct Simulation {
@@ -23,7 +29,9 @@ pub struct Simulation {
     pub repulsive_force: f32,
     pub drag: f32,
     pub microsteps: i32,
-    mouse_position: glm::Vec2
+    mouse_position: glm::Vec2,
+    pub mouse_state: MOUSE_STATE,
+    pub mouse_active: bool
 }
 
 impl Default for Simulation {
@@ -64,12 +72,22 @@ impl Simulation {
             repulsive_force,
             drag,
             microsteps,
-            mouse_position: glm::vec2(0.0, 0.0)
+            mouse_position: glm::vec2(0.0, 0.0),
+            mouse_state: MOUSE_STATE::ATTRACTIVE,
+            mouse_active: false
         }
     }
 
     pub fn set_mouse_position(&mut self, x: f32, y: f32) {
         self.mouse_position = glm::vec2(x, y);
+    }
+
+    pub fn on_mouse_click(&mut self) {
+        self.mouse_active = !self.mouse_active;
+    }
+
+    pub fn next_mouse_mode(&mut self) {
+        self.mouse_state = if self.mouse_state == MOUSE_STATE::ATTRACTIVE { MOUSE_STATE::REPULSIVE } else { MOUSE_STATE::ATTRACTIVE };
     }
 
     fn remap_trig(value: f32) -> f32 {
@@ -99,10 +117,14 @@ impl Simulation {
             }
 
             if force_type == FORCE_TYPE::MOUSE {
+                if !self.mouse_active {
+                    continue;
+                }
+
                 let distance = (self.mouse_position / 800.0) - self.particles[i].position;
                 let mut potential = glm::vec2(0.0, 0.0);
-                potential.x = -1.0 * self.lj_potential(distance.x);
-                potential.y = -1.0 * self.lj_potential(distance.y);
+                potential.x = if self.mouse_state == MOUSE_STATE::REPULSIVE { -1.0 } else { 1.0 } * self.lj_potential(distance.x);
+                potential.y = if self.mouse_state == MOUSE_STATE::REPULSIVE { -1.0 } else { 1.0 } * self.lj_potential(distance.y);
 
                 let mut a_x = force * potential.x;
                 let mut a_y = force * potential.y;

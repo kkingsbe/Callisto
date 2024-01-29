@@ -94,6 +94,9 @@ impl Shader {
                 },
                 UniformValue::Vec2(value) => unsafe {
                     gl::Uniform2f(location, value.x, value.y);
+                },
+                UniformValue::Bool(value) => unsafe {
+                    gl::Uniform1i(location, value as GLint);
                 }
             }
         }

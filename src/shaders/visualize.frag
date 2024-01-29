@@ -14,6 +14,8 @@
 uniform float u_time;
 uniform float u_tracer_data[NUM_TRACERS * TRACER_SIZE];
 uniform vec2 u_mouse_position;
+uniform bool u_mouse_active;
+uniform bool u_mouse_attractive;
 
 vec3 lightblue(float value) {
     return mix(vec3(0.0, 0.222, 0.731), vec3(0.212, 0.625, 0.684), value);
@@ -29,14 +31,25 @@ vec3 purplered(float value) {
 }
 
 vec3 draw_crosshair(vec2 st, vec2 mouse_coords) {
+    vec3 crosshair_color = vec3(0.0);
+    if(u_mouse_attractive && u_mouse_active) {
+        crosshair_color = vec3(1.0, 1.0, 0.0);
+    } else if(!u_mouse_attractive && u_mouse_active) {
+        crosshair_color = vec3(1.0, 0.0, 0.0);
+    } else if(u_mouse_attractive && !u_mouse_active) {
+        crosshair_color = vec3(0.0, 1.0, 0.0);
+    } else if(!u_mouse_attractive && !u_mouse_active) {
+        crosshair_color = vec3(0.0, 0.0, 1.0);
+    }
+
     if(abs(st.x - mouse_coords.x) < CROSSHAIR_GAP_SIZE && abs(st.y - mouse_coords.y) < CROSSHAIR_GAP_SIZE) {
         return vec3(0.0);
     }
     if(st.x >= mouse_coords.x - CROSSHAIR_LINE_WIDTH && st.x <= mouse_coords.x + CROSSHAIR_LINE_WIDTH && abs(st.y - mouse_coords.y) <= CROSSHAIR_SIZE) {
-        return vec3(1.0, 1.0, 1.0);
+        return crosshair_color;
     }
     if(st.y >= mouse_coords.y - CROSSHAIR_LINE_WIDTH && st.y <= mouse_coords.y + CROSSHAIR_LINE_WIDTH && abs(st.x - mouse_coords.x) <= CROSSHAIR_SIZE) {
-        return vec3(1.0, 1.0, 1.0);
+        return crosshair_color;
     }
     return vec3(0.0);
 }

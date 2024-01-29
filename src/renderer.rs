@@ -6,6 +6,9 @@ use crate::uniform::UniformValue;
 extern crate nalgebra_glm as glm;
 use crate::simulation::Simulation;
 
+pub enum KEY {
+    LCTRL
+}
 pub struct Renderer {
     pub program: ShaderProgram,
     pub simulation: Simulation,
@@ -22,6 +25,8 @@ impl Renderer {
 
         unsafe {
             let mut fragment_shader = Shader::new("visualize".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
+            fragment_shader.add_uniform("u_mouse_active".to_string(), UniformValue::Bool(false));
+            fragment_shader.add_uniform("u_mouse_attractive".to_string(), UniformValue::Bool(true));
             fragment_shader.add_uniform("u_mouse_position".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
             fragment_shader.add_uniform("u_resolution".to_string(), UniformValue::Float(800.0));
             fragment_shader.add_uniform("u_time".to_string(), UniformValue::Float(0.0));
@@ -38,12 +43,26 @@ impl Renderer {
         self.simulation.set_mouse_position(x, y);
     }
 
+    pub fn on_mouse_click(&mut self) {
+        self.simulation.on_mouse_click();
+    }
+
+    pub fn on_keypress(&mut self, key: KEY) {
+        match key {
+            KEY::LCTRL => {
+                self.simulation.next_mouse_mode();
+            }
+        }
+    }
+
     pub fn draw(&mut self) {
         self.simulation.step();
 
         let program_id = self.program.id;
         let shader = self.program.get_shader("visualize".to_string()).unwrap();
 
+        shader.update_uniform_value("u_mouse_active".to_string(), UniformValue::Bool(self.simulation.mouse_active));
+        shader.update_uniform_value("u_mouse_attractive".to_string(), UniformValue::Bool(self.simulation.mouse_state == crate::simulation::MOUSE_STATE::ATTRACTIVE));
         shader.update_uniform_value("u_mouse_position".to_string(), UniformValue::Vec2(self.mouse_position));
         shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.simulation.t));
         shader.update_uniform_value("u_resolution".to_string(), UniformValue::Float(800.0));
