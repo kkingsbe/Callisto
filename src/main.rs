@@ -2,16 +2,20 @@ mod shader;
 mod shaderprogram;
 mod renderer;
 mod uniform;
+mod particle;
+mod simulation;
 
 use glutin::{Api, ContextBuilder, GlRequest};
 use glutin::event::{Event, WindowEvent};
+use glutin::event::WindowEvent::MouseInput;
 use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::window::WindowBuilder;
+
 use crate::renderer::Renderer;
 
 fn main() {
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().with_title("Hello world!").with_inner_size(glutin::dpi::LogicalSize::new(800.0, 800.0));
+    let window = WindowBuilder::new().with_title("Callisto").with_inner_size(glutin::dpi::LogicalSize::new(800.0, 800.0));
 
     let gl_context = ContextBuilder::new()
         .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
@@ -29,8 +33,6 @@ fn main() {
     let mut renderer = Renderer::new().expect("Cannot create renderer");
 
     event_loop.run(move |event, _, control_flow| {
-        //*control_flow = ControlFlow::Wait;
-
         match event {
             Event::LoopDestroyed => (),
             Event::WindowEvent { event, .. } => match event {
@@ -39,6 +41,27 @@ fn main() {
                     gl_context.resize(physical_size)
                 },
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                WindowEvent::CursorMoved { position, .. } => {
+                    renderer.set_mouse_position(position.x as f32, position.y as f32);
+                },
+                MouseInput { button, .. } => {
+                    match button {
+                        glutin::event::MouseButton::Left => {
+                            renderer.on_mouse_click();
+                        },
+                        _ => ()
+                    }
+                },
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if input.state == glutin::event::ElementState::Pressed {
+                        match input.virtual_keycode {
+                            Some(glutin::event::VirtualKeyCode::LControl) => {
+                                renderer.on_keypress(renderer::KEY::LCTRL)
+                            },
+                            _ => (),
+                        }
+                    }
+                },
                 _ => (),
             },
             Event::RedrawRequested(_) => {

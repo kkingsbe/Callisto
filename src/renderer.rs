@@ -1,46 +1,72 @@
-use std::ffi::CString;
 use std::ptr;
-use std::time::SystemTime;
-use gl::types::{GLfloat, GLint, GLuint};
+use gl::types::GLuint;
 use crate::shader::{Shader, ShaderError};
 use crate::shaderprogram::ShaderProgram;
 use crate::uniform::UniformValue;
+extern crate nalgebra_glm as glm;
+use crate::simulation::Simulation;
 
+pub enum KEY {
+    LCTRL
+}
 pub struct Renderer {
-    pub t: f64,
-    t_start: f64,
-    pub program: ShaderProgram
+    pub program: ShaderProgram,
+    pub simulation: Simulation,
+    mouse_position: glm::Vec2
 }
 
 impl Renderer {
     pub fn new() -> Result<Self, ShaderError> {
-        let t_start = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as f64) / 1000.0;
-        //let FRAGMENT_SHADER_SOURCE = include_str!("shaders/graph_test.frag");
-        //let FRAGMENT_SHADER_SOURCE = include_str!("shaders/mix_test.frag");
-        let FRAGMENT_SHADER_SOURCE = include_str!("shaders/colorwheel.frag");
+        let FRAGMENT_SHADER_SOURCE = include_str!("shaders/visualize.frag");
 
         println!("{}", FRAGMENT_SHADER_SOURCE);
+
+        let simulation: Simulation = Default::default();
+
         unsafe {
-            let mut fragment_shader = Shader::new("Colorwheel".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
+            let mut fragment_shader = Shader::new("visualize".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
+            fragment_shader.add_uniform("u_mouse_active".to_string(), UniformValue::Bool(false));
+            fragment_shader.add_uniform("u_mouse_attractive".to_string(), UniformValue::Bool(true));
+            fragment_shader.add_uniform("u_mouse_position".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
             fragment_shader.add_uniform("u_resolution".to_string(), UniformValue::Float(800.0));
             fragment_shader.add_uniform("u_time".to_string(), UniformValue::Float(0.0));
+            fragment_shader.add_uniform("u_tracer_data".to_string(), UniformValue::Array_F(vec!(0.0, 0.0).repeat(simulation.particles.len())));
+
             let program = ShaderProgram::new(vec!(fragment_shader))?;
 
-            Ok(Self { program, t_start, t: 0.0 })
+            Ok(Self { program, simulation, mouse_position: glm::vec2(0.0, 0.0) })
         }
     }
 
-    fn update_time(&mut self) {
-        self.t = (SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as f64 / 1000.0) - self.t_start;
+    pub fn set_mouse_position(&mut self, x: f32, y: f32) {
+        self.mouse_position = glm::vec2(x, y);
+        self.simulation.set_mouse_position(x, y);
+    }
+
+    pub fn on_mouse_click(&mut self) {
+        self.simulation.on_mouse_click();
+    }
+
+    pub fn on_keypress(&mut self, key: KEY) {
+        match key {
+            KEY::LCTRL => {
+                self.simulation.next_mouse_mode();
+            }
+        }
     }
 
     pub fn draw(&mut self) {
-        self.update_time();
+        self.simulation.step();
 
         let program_id = self.program.id;
-        let shader = self.program.get_shader("Colorwheel".to_string()).unwrap();
-        shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.t));
+        let shader = self.program.get_shader("visualize".to_string()).unwrap();
+
+        shader.update_uniform_value("u_mouse_active".to_string(), UniformValue::Bool(self.simulation.mouse_active));
+        shader.update_uniform_value("u_mouse_attractive".to_string(), UniformValue::Bool(self.simulation.mouse_state == crate::simulation::MOUSE_STATE::ATTRACTIVE));
+        shader.update_uniform_value("u_mouse_position".to_string(), UniformValue::Vec2(self.mouse_position));
+        shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.simulation.t));
         shader.update_uniform_value("u_resolution".to_string(), UniformValue::Float(800.0));
+        shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(self.simulation.pack()));
         shader.apply_uniforms(program_id);
 
         let vertex_data: [f32; 20] = [

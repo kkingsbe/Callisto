@@ -58,6 +58,7 @@ impl Shader {
 
             error_log.set_len(error_log_size as usize);
             let log = String::from_utf8(error_log)?;
+            println!("Error: {}", log);
             Err(ShaderError::CompilationError(log))
         }
     }
@@ -76,13 +77,25 @@ impl Shader {
         };
 
         if(location == -1) {
-            //panic!("Uniform {} not found in shader", key.clone());
+            //println!("Uniform {} not found in shader", key.clone());
         } else {
             match self.uniform_manager.get_value(&key) {
                 UniformValue::Float(value) => unsafe {
                     gl::Uniform1f(location, value as GLfloat);
                 },
                 UniformValue::Int(value) => unsafe {
+                    gl::Uniform1i(location, value as GLint);
+                },
+                UniformValue::Mat4(value) => unsafe {
+                    gl::UniformMatrix4fv(location, 1, gl::FALSE, value.as_ptr());
+                },
+                UniformValue::Array_F(value) => unsafe {
+                    gl::Uniform1fv(location, value.len() as GLsizei, value.as_ptr());
+                },
+                UniformValue::Vec2(value) => unsafe {
+                    gl::Uniform2f(location, value.x, value.y);
+                },
+                UniformValue::Bool(value) => unsafe {
                     gl::Uniform1i(location, value as GLint);
                 }
             }
