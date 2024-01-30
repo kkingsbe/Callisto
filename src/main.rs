@@ -15,7 +15,7 @@ use crate::renderer::Renderer;
 
 fn main() {
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().with_title("Hello world!").with_inner_size(glutin::dpi::LogicalSize::new(800.0, 800.0));
+    let window = WindowBuilder::new().with_title("Callisto").with_inner_size(glutin::dpi::LogicalSize::new(800.0, 800.0));
 
     let gl_context = ContextBuilder::new()
         .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
