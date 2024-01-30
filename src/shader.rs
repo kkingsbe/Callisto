@@ -77,7 +77,7 @@ impl Shader {
         };
 
         if(location == -1) {
-            println!("Uniform {} not found in shader", key.clone());
+            //println!("Uniform {} not found in shader", key.clone());
         } else {
             match self.uniform_manager.get_value(&key) {
                 UniformValue::Float(value) => unsafe {

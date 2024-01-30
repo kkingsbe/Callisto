@@ -1,5 +1,5 @@
 #define TWO_PI 6.28318530718
-#define NUM_TRACERS 400
+#define NUM_TRACERS 200
 #define TRACER_SIZE 2 //Number of floats per tracer
 #define SIM_RESOLUTION 1000.0 //Grid size
 #define RESOLUTION 800.0 //Canvas size

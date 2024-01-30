@@ -9,13 +9,21 @@ pub enum FORCE_TYPE {
     ISL,
     LJ,
     PROPORTIONAL,
-    MOUSE
+    MOUSE,
+    GRAVITY
 }
 
 #[derive(PartialEq)]
 pub enum MOUSE_STATE {
     ATTRACTIVE,
     REPULSIVE
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum DOMAIN_MODE {
+    WRAP,
+    INFINITE,
+    WALL
 }
 
 const EPSILON: f32 = 0.000000001;
@@ -31,7 +39,8 @@ pub struct Simulation {
     pub microsteps: i32,
     mouse_position: glm::Vec2,
     pub mouse_state: MOUSE_STATE,
-    pub mouse_active: bool
+    pub mouse_active: bool,
+    gravity: bool
 }
 
 impl Default for Simulation {
@@ -40,16 +49,17 @@ impl Default for Simulation {
             0.01 / 1000.0,
             0.001,
             0.000002,
-            1.0,
+            0.5,
             10.0,
-            400,
-            1
+            200,
+            1,
+            false
         )
     }
 }
 
 impl Simulation {
-    pub fn new(dt: f32, attractive_force: f32, repulsive_force: f32, drag: f32, max_spawn_velocity: f32, num_particles: i32, microsteps: i32) -> Self {
+    pub fn new(dt: f32, attractive_force: f32, repulsive_force: f32, drag: f32, max_spawn_velocity: f32, num_particles: i32, microsteps: i32, gravity: bool) -> Self {
         let mut rng = rand::thread_rng();
         let mut initial_state = Vec::new();
         for _ in 0..num_particles {
@@ -59,7 +69,7 @@ impl Simulation {
                     rng.gen_range(-max_spawn_velocity..max_spawn_velocity),
                     rng.gen_range(-max_spawn_velocity..max_spawn_velocity)
                 ),
-                true
+                DOMAIN_MODE::WALL
             ));
         }
 
@@ -74,7 +84,8 @@ impl Simulation {
             microsteps,
             mouse_position: glm::vec2(0.0, 0.0),
             mouse_state: MOUSE_STATE::ATTRACTIVE,
-            mouse_active: false
+            mouse_active: false,
+            gravity
         }
     }
 
@@ -113,6 +124,11 @@ impl Simulation {
 
                 self.particles[i].new_acceleration.x -= vx_sign * self.drag * self.particles[i].velocity.x.powi(2);
                 self.particles[i].new_acceleration.y -= vy_sign * self.drag * self.particles[i].velocity.y.powi(2);
+                continue;
+            }
+
+            if force_type == FORCE_TYPE::GRAVITY {
+                self.particles[i].new_acceleration.y -= force;
                 continue;
             }
 
@@ -200,6 +216,11 @@ impl Simulation {
 
         self.apply_force(self.attractive_force, FORCE_TYPE::ISL);
         self.apply_force(self.repulsive_force, FORCE_TYPE::LJ);
+
+        if self.gravity {
+            self.apply_force(10000000.0, FORCE_TYPE::GRAVITY);
+        }
+
         self.apply_force(self.drag, FORCE_TYPE::PROPORTIONAL);
         self.apply_force(0.001, FORCE_TYPE::MOUSE);
 
