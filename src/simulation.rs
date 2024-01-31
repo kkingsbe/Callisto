@@ -19,7 +19,7 @@ pub enum MOUSE_STATE {
     REPULSIVE
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug, Copy)]
 pub enum DOMAIN_MODE {
     WRAP,
     INFINITE,
@@ -37,7 +37,7 @@ pub struct Simulation {
     pub repulsive_force: f32,
     pub drag: f32,
     pub microsteps: i32,
-    mouse_position: glm::Vec2,
+    mouse_position: glm::Vec2, //Normalized (0,1)
     pub mouse_state: MOUSE_STATE,
     pub mouse_active: bool,
     gravity: bool
@@ -53,13 +53,14 @@ impl Default for Simulation {
             10.0,
             200,
             1,
-            false
+            false,
+            DOMAIN_MODE::WALL
         )
     }
 }
 
 impl Simulation {
-    pub fn new(dt: f32, attractive_force: f32, repulsive_force: f32, drag: f32, max_spawn_velocity: f32, num_particles: i32, microsteps: i32, gravity: bool) -> Self {
+    pub fn new(dt: f32, attractive_force: f32, repulsive_force: f32, drag: f32, max_spawn_velocity: f32, num_particles: i32, microsteps: i32, gravity: bool, domain_mode: DOMAIN_MODE) -> Self {
         let mut rng = rand::thread_rng();
         let mut initial_state = Vec::new();
         for _ in 0..num_particles {
@@ -69,7 +70,7 @@ impl Simulation {
                     rng.gen_range(-max_spawn_velocity..max_spawn_velocity),
                     rng.gen_range(-max_spawn_velocity..max_spawn_velocity)
                 ),
-                DOMAIN_MODE::WALL
+                domain_mode
             ));
         }
 
@@ -137,7 +138,7 @@ impl Simulation {
                     continue;
                 }
 
-                let distance = (self.mouse_position / 800.0) - self.particles[i].position;
+                let distance = self.mouse_position - self.particles[i].position;
                 let mut potential = glm::vec2(0.0, 0.0);
                 potential.x = if self.mouse_state == MOUSE_STATE::REPULSIVE { -1.0 } else { 1.0 } * self.lj_potential(distance.x);
                 potential.y = if self.mouse_state == MOUSE_STATE::REPULSIVE { -1.0 } else { 1.0 } * self.lj_potential(distance.y);

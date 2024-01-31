@@ -37,8 +37,10 @@ fn main() {
             Event::LoopDestroyed => (),
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(physical_size) => {
-                    println!("Window resized");
-                    gl_context.resize(physical_size)
+                    //println!("Window resized");
+                    println!("{:#?}", physical_size);
+                    gl_context.resize(physical_size);
+                    renderer.set_screen_size(physical_size.width as f32, physical_size.height as f32);
                 },
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                 WindowEvent::CursorMoved { position, .. } => {

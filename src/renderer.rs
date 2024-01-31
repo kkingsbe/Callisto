@@ -12,7 +12,9 @@ pub enum KEY {
 pub struct Renderer {
     pub program: ShaderProgram,
     pub simulation: Simulation,
-    mouse_position: glm::Vec2
+    active_particle_index: usize,
+    mouse_position: glm::Vec2,
+    screensize: glm::Vec2
 }
 
 impl Renderer {
@@ -28,19 +30,24 @@ impl Renderer {
             fragment_shader.add_uniform("u_mouse_active".to_string(), UniformValue::Bool(false));
             fragment_shader.add_uniform("u_mouse_attractive".to_string(), UniformValue::Bool(true));
             fragment_shader.add_uniform("u_mouse_position".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
-            fragment_shader.add_uniform("u_resolution".to_string(), UniformValue::Float(800.0));
+            fragment_shader.add_uniform("u_resolution".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
             fragment_shader.add_uniform("u_time".to_string(), UniformValue::Float(0.0));
             fragment_shader.add_uniform("u_tracer_data".to_string(), UniformValue::Array_F(vec!(0.0, 0.0).repeat(simulation.particles.len())));
 
             let program = ShaderProgram::new(vec!(fragment_shader))?;
 
-            Ok(Self { program, simulation, mouse_position: glm::vec2(0.0, 0.0) })
+            Ok(Self { program, simulation, mouse_position: glm::vec2(0.0, 0.0), active_particle_index: 0, screensize: glm::vec2(800.0, 800.0) })
         }
     }
 
     pub fn set_mouse_position(&mut self, x: f32, y: f32) {
         self.mouse_position = glm::vec2(x, y);
-        self.simulation.set_mouse_position(x, y);
+        self.simulation.set_mouse_position(x / self.screensize.x, y / self.screensize.y);
+    }
+
+    pub fn set_screen_size(&mut self, width: f32, height: f32) {
+        self.screensize = glm::vec2(width, height);
+        //self.simulation.set_screen_size(width, height);
     }
 
     pub fn on_mouse_click(&mut self) {
@@ -55,19 +62,21 @@ impl Renderer {
         }
     }
 
-    pub fn draw(&mut self) {
-        self.simulation.step();
-
+    fn update_uniforms(&mut self) {
         let program_id = self.program.id;
         let shader = self.program.get_shader("visualize".to_string()).unwrap();
-
         shader.update_uniform_value("u_mouse_active".to_string(), UniformValue::Bool(self.simulation.mouse_active));
         shader.update_uniform_value("u_mouse_attractive".to_string(), UniformValue::Bool(self.simulation.mouse_state == crate::simulation::MOUSE_STATE::ATTRACTIVE));
         shader.update_uniform_value("u_mouse_position".to_string(), UniformValue::Vec2(self.mouse_position));
         shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.simulation.t));
-        shader.update_uniform_value("u_resolution".to_string(), UniformValue::Float(800.0));
-        shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(self.simulation.pack()));
+        shader.update_uniform_value("u_resolution".to_string(), UniformValue::Vec2(self.screensize));
+        shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(self.simulation.particles[self.active_particle_index].to_flat()));
         shader.apply_uniforms(program_id);
+    }
+
+    pub fn draw(&mut self) {
+        self.simulation.step();
+        self.update_uniforms();
 
         let vertex_data: [f32; 20] = [
             -1.0, -1.0, 1.0, 0.0, 0.0, //Bottom left, red
@@ -78,6 +87,8 @@ impl Renderer {
 
         unsafe {
             let mut vbo: GLuint = 0;
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::GenBuffers(1, &mut vbo);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(
@@ -101,8 +112,13 @@ impl Renderer {
         unsafe {
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
-            self.program.apply();
-            gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+
+            for i in 0..self.simulation.particles.len() {
+                self.active_particle_index = i;
+                self.update_uniforms();
+                self.program.apply();
+                gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+            }
         }
     }
 }

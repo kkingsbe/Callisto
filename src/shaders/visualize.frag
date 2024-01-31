@@ -1,8 +1,7 @@
 #define TWO_PI 6.28318530718
 #define NUM_TRACERS 200
 #define TRACER_SIZE 2 //Number of floats per tracer
-#define SIM_RESOLUTION 1000.0 //Grid size
-#define RESOLUTION 800.0 //Canvas size
+#define SIM_RESOLUTION 10000.0 //Grid size
 
 #define BRIGHTNESS 0.4
 #define SPREAD 6.0
@@ -10,9 +9,9 @@
 #define CROSSHAIR_SIZE 0.02
 #define CROSSHAIR_GAP_SIZE 0.005
 
-//uniform float u_resolution;
+uniform vec2 u_resolution;
 uniform float u_time;
-uniform float u_tracer_data[NUM_TRACERS * TRACER_SIZE];
+uniform float u_tracer_data[TRACER_SIZE];
 uniform vec2 u_mouse_position;
 uniform bool u_mouse_active;
 uniform bool u_mouse_attractive;
@@ -57,8 +56,8 @@ vec3 draw_crosshair(vec2 st, vec2 mouse_coords) {
 void main() {
     float spread = SPREAD / 1000.0;
     float cell_size = 1.0 / SIM_RESOLUTION;
-    vec2 st = gl_FragCoord.xy / RESOLUTION;
-    vec2 mouse_coords = u_mouse_position / RESOLUTION;
+    vec2 st = gl_FragCoord.xy / u_resolution;
+    vec2 mouse_coords = u_mouse_position / u_resolution;
     mouse_coords.y = 1.0 - mouse_coords.y;
 
     float density = 0.0;
@@ -73,24 +72,19 @@ void main() {
     //float dist = distance(st, uv) / cell_size; //Somehow this is the distance from the grid edge
     //dist = 1.0 - dist; //Invert the distance so that it's 1 at the edge and 0 at the center
 
-    //Iterate over each tracer
-    for (int i = 0; i < NUM_TRACERS * TRACER_SIZE; i += 2) {
-        //Get tracer data
-        vec2 tracer_pos = vec2(u_tracer_data[i], u_tracer_data[i + 1]);;
-        //vec2 tracer_pos = vec2(u_tracer_data[0], u_tracer_data[1]);;
+    vec2 tracer_pos = vec2(u_tracer_data[0], u_tracer_data[1]);;
 
-        //Calculate distance from point to tracer
-        float dist = distance(uv, tracer_pos);
-        //float i_dist = 0.025 - dist;
-        float i_dist = (u_time / 100.0) - dist;
+    //Calculate distance from point to tracer
+    float dist = distance(uv, tracer_pos);
+    //float i_dist = 0.025 - dist;
+    float i_dist = (u_time / 100.0) - dist;
 
-        //float spread = 0.05;
-        //float brightness = 0.1;
+    //float spread = 0.05;
+    //float brightness = 0.1;
 
-        float density_contrib = spread / (dist);
-        if(density_contrib > 1.0) density_contrib = 1.0;
-        density += density_contrib * BRIGHTNESS;
-    }
+    float density_contrib = spread / (dist);
+    if(density_contrib > 1.0) density_contrib = 1.0;
+    density += density_contrib * BRIGHTNESS;
 
     //Render the denisty as a heatmap
     //color = lightblue(density);
@@ -102,5 +96,5 @@ void main() {
         color = crosshair;
     }
 
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color, density);
 }
