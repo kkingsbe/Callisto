@@ -11,7 +11,6 @@
 
 uniform vec2 u_resolution;
 uniform float u_time;
-uniform float u_tracer_data[TRACER_SIZE];
 uniform vec2 u_mouse_position;
 uniform bool u_mouse_active;
 uniform bool u_mouse_attractive;
@@ -54,6 +53,7 @@ vec3 draw_crosshair(vec2 st, vec2 mouse_coords) {
 }
 
 void main() {
+    /*
     float spread = SPREAD / 1000.0;
     float cell_size = 1.0 / SIM_RESOLUTION;
     vec2 st = gl_FragCoord.xy / u_resolution;
@@ -96,5 +96,6 @@ void main() {
         color = crosshair;
     }
 
-    gl_FragColor = vec4(color, density);
+    */
+    gl_FragColor = vec4(gl_Color.rgb, 1.0);
 }

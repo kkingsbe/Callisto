@@ -10,7 +10,8 @@ pub enum KEY {
     LCTRL
 }
 pub struct Renderer {
-    pub program: ShaderProgram,
+    pub density_map_program: ShaderProgram,
+    pub visualize_program: ShaderProgram,
     pub simulation: Simulation,
     active_particle_index: usize,
     mouse_position: glm::Vec2,
@@ -19,24 +20,30 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new() -> Result<Self, ShaderError> {
-        let FRAGMENT_SHADER_SOURCE = include_str!("shaders/visualize.frag");
+        let VISUALIZE_SHADER_SOURCE = include_str!("shaders/visualize.frag");
+        let DENSIY_MAP_SHADER_SOURCE = include_str!("shaders/densitymap.frag");
 
-        println!("{}", FRAGMENT_SHADER_SOURCE);
+        println!("{}", VISUALIZE_SHADER_SOURCE);
+        println!("{}", DENSIY_MAP_SHADER_SOURCE);
 
         let simulation: Simulation = Default::default();
 
         unsafe {
-            let mut fragment_shader = Shader::new("visualize".to_string(), FRAGMENT_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
-            fragment_shader.add_uniform("u_mouse_active".to_string(), UniformValue::Bool(false));
-            fragment_shader.add_uniform("u_mouse_attractive".to_string(), UniformValue::Bool(true));
-            fragment_shader.add_uniform("u_mouse_position".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
-            fragment_shader.add_uniform("u_resolution".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
-            fragment_shader.add_uniform("u_time".to_string(), UniformValue::Float(0.0));
-            fragment_shader.add_uniform("u_tracer_data".to_string(), UniformValue::Array_F(vec!(0.0, 0.0).repeat(simulation.particles.len())));
+            let mut density_map = Shader::new("density_map".to_string(), DENSIY_MAP_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
+            density_map.add_uniform("u_resolution".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
+            density_map.add_uniform("u_tracer_data".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
 
-            let program = ShaderProgram::new(vec!(fragment_shader))?;
+            let mut visualize = Shader::new("visualize".to_string(), VISUALIZE_SHADER_SOURCE, gl::FRAGMENT_SHADER)?;
+            visualize.add_uniform("u_mouse_active".to_string(), UniformValue::Bool(false));
+            visualize.add_uniform("u_mouse_attractive".to_string(), UniformValue::Bool(true));
+            visualize.add_uniform("u_mouse_position".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
+            visualize.add_uniform("u_resolution".to_string(), UniformValue::Vec2(glm::vec2(0.0, 0.0)));
+            visualize.add_uniform("u_time".to_string(), UniformValue::Float(0.0));
 
-            Ok(Self { program, simulation, mouse_position: glm::vec2(0.0, 0.0), active_particle_index: 0, screensize: glm::vec2(800.0, 800.0) })
+            let density_map_program = ShaderProgram::new(vec!(density_map))?;
+            let visualize_program = ShaderProgram::new(vec!(visualize))?;
+
+            Ok(Self { density_map_program, visualize_program, simulation, mouse_position: glm::vec2(0.0, 0.0), active_particle_index: 0, screensize: glm::vec2(800.0, 800.0) })
         }
     }
 
@@ -63,15 +70,20 @@ impl Renderer {
     }
 
     fn update_uniforms(&mut self) {
-        let program_id = self.program.id;
-        let shader = self.program.get_shader("visualize".to_string()).unwrap();
-        shader.update_uniform_value("u_mouse_active".to_string(), UniformValue::Bool(self.simulation.mouse_active));
-        shader.update_uniform_value("u_mouse_attractive".to_string(), UniformValue::Bool(self.simulation.mouse_state == crate::simulation::MOUSE_STATE::ATTRACTIVE));
-        shader.update_uniform_value("u_mouse_position".to_string(), UniformValue::Vec2(self.mouse_position));
-        shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.simulation.t));
-        shader.update_uniform_value("u_resolution".to_string(), UniformValue::Vec2(self.screensize));
-        shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(self.simulation.particles[self.active_particle_index].to_flat()));
-        shader.apply_uniforms(program_id);
+        let program_id = self.density_map_program.id;
+        let density_map_shader = self.density_map_program.get_shader("density_map".to_string()).unwrap();
+        density_map_shader.update_uniform_value("u_resolution".to_string(), UniformValue::Vec2(self.screensize));
+        density_map_shader.update_uniform_value("u_tracer_data".to_string(), UniformValue::Array_F(self.simulation.particles[self.active_particle_index].to_flat()));
+        density_map_shader.apply_uniforms(program_id);
+
+        let program_id = self.visualize_program.id;
+        let visualize_shader = self.visualize_program.get_shader("visualize".to_string()).unwrap();
+        visualize_shader.update_uniform_value("u_mouse_active".to_string(), UniformValue::Bool(self.simulation.mouse_active));
+        visualize_shader.update_uniform_value("u_mouse_attractive".to_string(), UniformValue::Bool(self.simulation.mouse_state == crate::simulation::MOUSE_STATE::ATTRACTIVE));
+        visualize_shader.update_uniform_value("u_mouse_position".to_string(), UniformValue::Vec2(self.mouse_position));
+        visualize_shader.update_uniform_value("u_time".to_string(), UniformValue::Float(self.simulation.t));
+        visualize_shader.update_uniform_value("u_resolution".to_string(), UniformValue::Vec2(self.screensize));
+        visualize_shader.apply_uniforms(program_id);
     }
 
     pub fn draw(&mut self) {
@@ -110,15 +122,18 @@ impl Renderer {
         }
 
         unsafe {
-            gl::ClearColor(0.3, 0.3, 0.3, 1.0);
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
             for i in 0..self.simulation.particles.len() {
                 self.active_particle_index = i;
                 self.update_uniforms();
-                self.program.apply();
+                self.density_map_program.apply();
                 gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
             }
+
+            //self.visualize_program.apply();
+            gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
         }
     }
 }
