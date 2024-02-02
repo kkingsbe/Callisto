@@ -1,4 +1,6 @@
 use std::ptr;
+use std::thread::sleep;
+use std::time::{Duration, SystemTime};
 use gl::types::GLuint;
 use crate::shader::{Shader, ShaderError};
 use crate::shaderprogram::ShaderProgram;
@@ -15,7 +17,8 @@ pub struct Renderer {
     pub simulation: Simulation,
     active_particle_index: usize,
     mouse_position: glm::Vec2,
-    screensize: glm::Vec2
+    screensize: glm::Vec2,
+    last_frame_time: f64
 }
 
 impl Renderer {
@@ -43,7 +46,7 @@ impl Renderer {
             let density_map_program = ShaderProgram::new(vec!(density_map))?;
             let visualize_program = ShaderProgram::new(vec!(visualize))?;
 
-            Ok(Self { density_map_program, visualize_program, simulation, mouse_position: glm::vec2(0.0, 0.0), active_particle_index: 0, screensize: glm::vec2(800.0, 800.0) })
+            Ok(Self { density_map_program, visualize_program, simulation, mouse_position: glm::vec2(0.0, 0.0), active_particle_index: 0, screensize: glm::vec2(800.0, 800.0), last_frame_time: 0.0 })
         }
     }
 
@@ -135,5 +138,12 @@ impl Renderer {
             //self.visualize_program.apply();
             gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
         }
+
+        let mut current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as f64 / 1000.0;
+        while current_time - self.last_frame_time < 0.016 {
+            current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as f64 / 1000.0;
+            //sleep(Duration::from_millis(1));
+        }
+        self.last_frame_time = current_time;
     }
 }

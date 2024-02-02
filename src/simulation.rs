@@ -1,4 +1,5 @@
 use std::time::SystemTime;
+use nalgebra_glm::atan2;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use crate::particle::Particle;
@@ -138,14 +139,20 @@ impl Simulation {
                     continue;
                 }
 
-                let distance = self.mouse_position - self.particles[i].position;
+                let mut mouse_pos = self.mouse_position;
+                mouse_pos.y = 1.0 - mouse_pos.y;
+                let distance = mouse_pos - self.particles[i].position;
+                let sign = if self.mouse_state == MOUSE_STATE::REPULSIVE { -1.0 } else { 1.0 };
                 let mut potential = glm::vec2(0.0, 0.0);
-                potential.x = if self.mouse_state == MOUSE_STATE::REPULSIVE { -1.0 } else { 1.0 } * self.lj_potential(distance.x);
-                potential.y = if self.mouse_state == MOUSE_STATE::REPULSIVE { -1.0 } else { 1.0 } * self.lj_potential(distance.y);
+                potential.x = sign * self.lj_potential(distance.x);
+                potential.y = sign * self.lj_potential(distance.y);
 
-                let mut a_x = force * potential.x;
-                let mut a_y = force * potential.y;
+                let angle = distance.y.atan2(distance.x);
 
+                let mut a_x = angle.cos() * force * potential.norm();
+                let mut a_y = angle.sin() * force * potential.norm();
+
+                /*
                 if distance.x < 0.0 {
                     a_x *= -1.0;
                 }
@@ -153,6 +160,7 @@ impl Simulation {
                 if distance.y < 0.0 {
                     a_y *= -1.0;
                 }
+                 */
 
                 self.particles[i].new_acceleration.x += a_x;
                 self.particles[i].new_acceleration.y += a_y;
@@ -166,8 +174,8 @@ impl Simulation {
 
                     match force_type {
                         FORCE_TYPE::ISL => {
-                            potential.x = -1.0 * self.isl_potential(distance.x);
-                            potential.y = -1.0 * self.isl_potential(distance.y);
+                            potential.x = -1.0 * self.isl_potential(distance.x, EPSILON);
+                            potential.y = -1.0 * self.isl_potential(distance.y, EPSILON);
                         },
                         FORCE_TYPE::LJ => {
                             potential.x = self.lj_potential(distance.x);
@@ -177,15 +185,16 @@ impl Simulation {
                     }
 
                     // Avoid division by zero by adding a small epsilon
-                    let mut a_x = force * potential.x;
-                    let mut a_y = force * potential.y;
+                    let angle = distance.y.atan2(distance.x);
+                    let mut a_x = angle.cos() * force * potential.norm();
+                    let mut a_y = angle.sin() * force * potential.norm();
 
                     if distance.x < 0.0 {
-                        a_x *= -1.0;
+                        a_x *= -0.5;
                     }
 
                     if distance.y < 0.0 {
-                        a_y *= -1.0;
+                        a_y *= -0.5;
                     }
 
                     // Update acceleration
@@ -202,8 +211,8 @@ impl Simulation {
         4.0 * (1.0 / (r12 + EPSILON) - 1.0 / (r6 + EPSILON))
     }
 
-    fn isl_potential(&self, r: f32) -> f32 {
-        1.0 / (r.powi(2) + EPSILON)
+    fn isl_potential(&self, r: f32, _epsilon: f32) -> f32 {
+        1.0 / (r.powi(2) + _epsilon)
     }
 
     pub fn step(&mut self) {
@@ -223,7 +232,7 @@ impl Simulation {
         }
 
         self.apply_force(self.drag, FORCE_TYPE::PROPORTIONAL);
-        self.apply_force(0.001, FORCE_TYPE::MOUSE);
+        self.apply_force(0.0003, FORCE_TYPE::MOUSE);
 
         for particle in &mut self.particles {
             particle.update(self.dt);
