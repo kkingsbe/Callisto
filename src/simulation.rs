@@ -69,7 +69,7 @@ impl Simulation {
                     rng.gen_range(-max_spawn_velocity..max_spawn_velocity),
                     rng.gen_range(-max_spawn_velocity..max_spawn_velocity)
                 ),
-                DOMAIN_MODE::WALL
+                DOMAIN_MODE::WRAP
             ));
         }
 
