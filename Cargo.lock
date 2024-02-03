@@ -80,6 +80,7 @@ dependencies = [
  "hotwatch",
  "nalgebra-glm",
  "rand",
+ "rand_chacha",
  "rusttype",
  "thiserror",
 ]

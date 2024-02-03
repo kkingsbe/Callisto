@@ -1,7 +1,8 @@
 use std::time::SystemTime;
 use nalgebra_glm::atan2;
 use rand::prelude::ThreadRng;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 use crate::particle::Particle;
 extern crate nalgebra_glm as glm;
 
@@ -49,8 +50,8 @@ impl Default for Simulation {
         Self::new(
             0.01 / 1000.0,
             0.001,
-            0.000002,
-            0.5,
+            0.0001,
+            0.7,
             10.0,
             200,
             1,
@@ -62,7 +63,8 @@ impl Default for Simulation {
 
 impl Simulation {
     pub fn new(dt: f32, attractive_force: f32, repulsive_force: f32, drag: f32, max_spawn_velocity: f32, num_particles: i32, microsteps: i32, gravity: bool, domain_mode: DOMAIN_MODE) -> Self {
-        let mut rng = rand::thread_rng();
+        //let mut rng = rand::thread_rng();
+        let mut rng = ChaCha20Rng::from_entropy();
         let mut initial_state = Vec::new();
         for _ in 0..num_particles {
             initial_state.push(Particle::new(
@@ -107,14 +109,14 @@ impl Simulation {
         (value + 1.0) / 2.0
     }
 
-    pub fn rand_coord(mut rng: ThreadRng) -> glm::Vec2 {
+    pub fn rand_coord(mut rng: ChaCha20Rng) -> glm::Vec2 {
         let theta = rng.gen_range(0.0..(2.0 * std::f32::consts::PI));
-        let max_r = 0.7;
+        let max_r = 0.2;
         let shift = (1.0 - max_r) / 2.0;
-        let r = rng.gen_range(0.6..max_r);
+        let r = rng.gen_range(0.1..max_r);
         glm::vec2(
-            (Simulation::remap_trig(theta.cos()) * r) + shift,
-            (Simulation::remap_trig(theta.sin()) * r) + shift
+            theta.cos() * r + shift,
+            theta.sin() * r + shift
         )
     }
 
@@ -186,16 +188,8 @@ impl Simulation {
 
                     // Avoid division by zero by adding a small epsilon
                     let angle = distance.y.atan2(distance.x);
-                    let mut a_x = angle.cos() * force * potential.norm();
-                    let mut a_y = angle.sin() * force * potential.norm();
-
-                    if distance.x < 0.0 {
-                        a_x *= -0.5;
-                    }
-
-                    if distance.y < 0.0 {
-                        a_y *= -0.5;
-                    }
+                    let a_x = angle.cos() * force * potential.norm();
+                    let a_y = angle.sin() * force * potential.norm();
 
                     // Update acceleration
                     self.particles[i].new_acceleration.x += a_x;
